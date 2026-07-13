@@ -1,4 +1,4 @@
-# PlutoSky / Pluto Plus AD9361 PetaLinux Project
+# PlutoSky AD9361 Project
 
 Hardware: OpenSourceSDRLab PlutoSky 7020-SDR AD9361 with PA
 
@@ -15,9 +15,13 @@ This repository contains custom Vivado and PetaLinux project files for bringing 
 - PetaLinux 2024.2
 
 The current focus of this project is AD9361 control and custom FPGA integration using Linux/IIO. 
+
 Linux IIO is used for configuring AD9361 through SPI. 
+
 AD9361 data interface module, ad9361.vhd currently only support lvds fdd 2r2t mode. Supports for other modes will be added later. 
+
 Custom DMA controller is added to transfer Rx/Tx data between FPGA and DDR. Analog Device provides DMA in their VHDL library, but I decided to use my own DMA controller. 
+
 More DSP modules will be added later to experiment with the SDR
 
 
