@@ -264,6 +264,6 @@ CONFIG_YOCTO_NETWORK_SSTATE_FEEDS_URL="https://petalinux.xilinx.com/sswreleases/
 #
 # User Layers
 #
-CONFIG_USER_LAYER_0="${TOPDIR}/../external/meta-adi/meta-adi-xilinx\""
+CONFIG_USER_LAYER_0="/home/yuan/pluto_plus_sdr/linux/plutosky_min/external/meta-adi/meta-adi-xilinx"
 CONFIG_USER_LAYER_1=""
 CONFIG_SUBSYSTEM_BOOTARGS_GENERATED="console=ttyPS0,115200 earlycon root=/dev/mmcblk0p2 ro rootwait net.ifnames=0 mem=768M"

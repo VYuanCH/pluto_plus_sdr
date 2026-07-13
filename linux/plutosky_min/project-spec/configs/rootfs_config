@@ -3775,7 +3775,7 @@ CONFIG_Init-manager-sysvinit=y
 #
 # PetaLinux RootFS Settings
 #
-CONFIG_ADD_EXTRA_USERS="root:root;pluto:66543999.;"
+CONFIG_ADD_EXTRA_USERS="root:root;pluto:pluto;"
 CONFIG_CREATE_NEW_GROUPS="aie;"
 CONFIG_ADD_USERS_TO_GROUPS="pluto:audio,video,aie,input;"
 CONFIG_ADD_USERS_TO_SUDOERS="pluto"

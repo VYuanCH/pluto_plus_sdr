@@ -1,38 +1,16 @@
-2026-07-13 09:18:13,798 - [DEBUG] Using xsct from : /tools/PetaLinux/2024.2/tool/components/xsct/bin/xsct
-2026-07-13 09:18:13,798 - [INFO] Getting Platform info from HW file
-2026-07-13 09:18:13,798 - [DEBUG] Using the soc_family specified by user:zynq
-2026-07-13 09:18:13,799 - [INFO] Generating Kconfig for project
-2026-07-13 09:18:13,799 - [DEBUG] Generating System HW file
-2026-07-13 09:18:13,799 - [DEBUG] xsct -sdx -nodisp /home/yuan/pluto_plus_sdr/linux/plutosky_min/components/yocto/layers/meta-xilinx/meta-xilinx-core/gen-machine-conf/gen-machine-scripts/hw-description.tcl plnx_gen_hwsysconf /home/yuan/pluto_plus_sdr/linux/plutosky_min/project-spec/hw-description/system.xsa
-2026-07-13 09:18:19,792 - [DEBUG] 
-
-****** Software Commandline Tool (XSCT) v2024.2.0
-  **** SW Build 5233591 on Sat Nov 02 20:05:54 MDT 2024
-    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
-    ** Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
-
-
-Warning: XSCT is deprecated and will be removed in future releases.
-We recommend using the new Python command-line tool for project management and debugging:
-- Run "vitis -i" for interactive mode.
-- Run "vitis -s <script>" for script mode.
-WARNING: sdtgen package cannot be loaded. System Device tree commands will not 
- be available
-INFO: [Hsi 55-2053] elapsed time for repository (/tools/PetaLinux/2024.2/tool/components/xsct/data/embeddedsw) loading 0 seconds
-
-WARNING: Failed in finding /tools/PetaLinux/2024.2/tool/components/xsct/data/system-device-tree-xlnx/device_tree/data/device_tree.tcl path.
-
-
-2026-07-13 09:18:19,888 - [DEBUG] Hardware Configuration:
-2026-07-13 09:18:19,888 - [DEBUG] MACHINE     = "None"
-2026-07-13 09:18:19,888 - [DEBUG] DEVICE_ID   = "7z020"
-2026-07-13 09:18:19,888 - [DEBUG] SOC_FAMILY  = "zynq"
-2026-07-13 09:18:19,888 - [DEBUG] SOC_VARIANT = ""
-2026-07-13 09:18:19,888 - [INFO] Menuconfig project
-2026-07-13 09:18:19,888 - [DEBUG] Running CMD: env KCONFIG_CONFIG=/home/yuan/pluto_plus_sdr/linux/plutosky_min/project-spec/configs/config mconf -s /home/yuan/pluto_plus_sdr/linux/plutosky_min/project-spec/configs/configs/Kconfig
-2026-07-13 09:18:38,773 - [INFO] Silentconfig rootfs
-2026-07-13 09:18:38,773 - [DEBUG] Running CMD: yes "" | env KCONFIG_CONFIG=/home/yuan/pluto_plus_sdr/linux/plutosky_min/project-spec/configs/rootfs_config conf /home/yuan/pluto_plus_sdr/linux/plutosky_min/project-spec/configs/rootfsconfigs/Kconfig
-2026-07-13 09:18:38,784 - [DEBUG] *
+2026-07-13 12:00:00,614 - [DEBUG] Using xsct from : /tools/PetaLinux/2024.2/tool/components/xsct/bin/xsct
+2026-07-13 12:00:00,614 - [INFO] Getting Platform info from HW file
+2026-07-13 12:00:00,614 - [DEBUG] Using the soc_family specified by user:zynq
+2026-07-13 12:00:00,627 - [DEBUG] Hardware Configuration:
+2026-07-13 12:00:00,627 - [DEBUG] MACHINE     = "None"
+2026-07-13 12:00:00,627 - [DEBUG] DEVICE_ID   = "7z020"
+2026-07-13 12:00:00,627 - [DEBUG] SOC_FAMILY  = "zynq"
+2026-07-13 12:00:00,627 - [DEBUG] SOC_VARIANT = ""
+2026-07-13 12:00:00,627 - [INFO] Menuconfig project
+2026-07-13 12:00:00,627 - [DEBUG] Running CMD: env KCONFIG_CONFIG=/home/yuan/pluto_plus_sdr/linux/plutosky_min/project-spec/configs/config mconf -s /home/yuan/pluto_plus_sdr/linux/plutosky_min/project-spec/configs/configs/Kconfig
+2026-07-13 12:00:40,196 - [INFO] Silentconfig rootfs
+2026-07-13 12:00:40,196 - [DEBUG] Running CMD: yes "" | env KCONFIG_CONFIG=/home/yuan/pluto_plus_sdr/linux/plutosky_min/project-spec/configs/rootfs_config conf /home/yuan/pluto_plus_sdr/linux/plutosky_min/project-spec/configs/rootfsconfigs/Kconfig
+2026-07-13 12:00:40,208 - [DEBUG] *
 * Configuration
 *
 *
@@ -3330,33 +3308,7 @@ Add Users to Sudo users (ADD_USERS_TO_SUDOERS) [pluto]
 #
 # configuration written to /home/yuan/pluto_plus_sdr/linux/plutosky_min/project-spec/configs/rootfs_config
 #
-2026-07-13 09:18:38,789 - [INFO] Generating configuration files
-2026-07-13 09:18:38,790 - [DEBUG] No multilibs enabled.
-2026-07-13 09:18:38,790 - [DEBUG] No multilibs enabled.
-2026-07-13 09:18:38,790 - [INFO] Adding user layers
-2026-07-13 09:18:38,790 - [DEBUG] Shutting down bitbake
-2026-07-13 09:18:38,790 - [DEBUG] Adding layer: /home/yuan/meta-adi/meta-adi-xilinx
-2026-07-13 09:18:38,790 - [DEBUG] bitbake-layers -F add-layer /home/yuan/meta-adi/meta-adi-xilinx
-2026-07-13 09:18:41,009 - [DEBUG] 
-NOTE: Starting bitbake server...
-NOTE: Started PRServer with DBfile: /home/yuan/pluto_plus_sdr/linux/plutosky_min/build/cache/prserv.sqlite3, Address: 127.0.0.1:43595, PID: 1335400
-
-
-
-2026-07-13 09:18:41,009 - [DEBUG] Shutting down bitbake
-2026-07-13 09:18:41,009 - [DEBUG] Adding layer: /home/yuan/pluto_plus_sdr/linux/plutosky_min/project-spec/meta-user
-2026-07-13 09:18:41,009 - [DEBUG] bitbake-layers -F add-layer /home/yuan/pluto_plus_sdr/linux/plutosky_min/project-spec/meta-user
-2026-07-13 09:18:43,523 - [DEBUG] 
-NOTE: Starting bitbake server...
-NOTE: Started PRServer with DBfile: /home/yuan/pluto_plus_sdr/linux/plutosky_min/build/cache/prserv.sqlite3, Address: 127.0.0.1:45985, PID: 1335430
-
-
-
-2026-07-13 09:18:43,530 - [INFO] Generating machine conf file
-2026-07-13 09:18:43,539 - [INFO] Generating plnxtool conf file
-2026-07-13 09:18:43,554 - [DEBUG] python3 /home/yuan/pluto_plus_sdr/linux/plutosky_min/components/yocto/layers/meta-xilinx/meta-xilinx-core/gen-machine-conf/gen-machine-scripts/rootfsconfigs/rootfs_config.py --update_cfg /home/yuan/pluto_plus_sdr/linux/plutosky_min/project-spec/configs/rootfs_config /home/yuan/pluto_plus_sdr/linux/plutosky_min/build/conf/plnxtool.conf zynq
-2026-07-13 09:18:43,617 - [DEBUG] 
-
-
-
-2026-07-13 09:18:43,618 - [DEBUG] Shutting down bitbake
+2026-07-13 12:00:40,213 - [INFO] Generating configuration files
+2026-07-13 12:00:40,214 - [DEBUG] No multilibs enabled.
+2026-07-13 12:00:40,214 - [DEBUG] No multilibs enabled.
+2026-07-13 12:00:40,227 - [DEBUG] Shutting down bitbake
