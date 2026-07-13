@@ -1,0 +1,9 @@
+[submodule "firmware/vhdl/vhdl_lib"]
+	path = firmware/vhdl/vhdl_lib
+	url = git@github.com:VYuanCH/vhdl_lib.git
+[submodule "linux/plutosky_min/external/external/meta-adi"]
+	path = linux/plutosky_min/external/external/meta-adi
+	url = https://github.com/analogdevicesinc/meta-adi.git
+[submodule "linux/plutosky_min/external/meta-adi"]
+	path = linux/plutosky_min/external/meta-adi
+	url = https://github.com/analogdevicesinc/meta-adi.git

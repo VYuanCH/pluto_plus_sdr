@@ -1,0 +1,92 @@
+/include/ "system-conf.dtsi"
+/ {
+    clocks {
+        ad9361_clkin: clock@0 {
+            compatible = "fixed-clock";
+            #clock-cells = <0>;
+            clock-frequency = <40000000>;
+            clock-output-names = "ad9361_ext_refclk";
+        };
+    };
+};
+
+/*
+ * Use whichever PS SPI you enabled in Vivado: &spi0 or &spi1.
+ * SPI via EMIO is still the PS SPI controller, not an AXI SPI core.
+ */
+
+&spi0 {
+    status = "okay";
+    num-cs = <1>;
+    is-decoded-cs = <0>;
+
+    adc0_ad9361: ad9361-phy@0 {
+        compatible = "adi,ad9361";
+        reg = <0>;
+
+        spi-cpha;
+        spi-max-frequency = <10000000>;
+
+        clocks = <&ad9361_clkin>;
+        clock-names = "ad9361_ext_refclk";
+        clock-output-names = "rx_sampl_clk", "tx_sampl_clk";
+        #clock-cells = <1>;
+
+        /*
+         * Use 2RX2TX only if your HDL and board wiring are actually 2RX2TX.
+         * For Pluto-like 1RX1TX testing, omit this initially.
+         */
+        adi,2rx-2tx-mode-enable;
+	    adi,pp-tx-swap-enable;
+	    adi,pp-rx-swap-enable;
+	    adi,rx-frame-pulse-mode-enable;
+	    adi,lvds-mode-enable;
+        adi,lvds-bias-mV = <600>;
+        adi,frequency-division-duplex-mode-enable;
+        adi,digital-interface-tune-skip-mode = <0x02>;
+        adi,rx-data-clock-delay = <0x00>;
+        adi,rx-data-delay = <0x00>;
+
+        /*
+         * Do not enable ENSM pin-control mode initially.
+         * Leave these commented for SPI-controlled ENSM.
+         */
+        /* adi,ensm-enable-txnrx-control-enable; */
+        /* adi,ensm-enable-pin-pulse-mode-enable; */
+
+        adi,rx-rf-port-input-select = <0>;
+        adi,tx-rf-port-input-select = <0>;
+
+        adi,rf-rx-bandwidth-hz = <18000000>;
+        adi,rf-tx-bandwidth-hz = <18000000>;
+
+        adi,rx-synthesizer-frequency-hz = /bits/ 64 <2400000000>;
+        adi,tx-synthesizer-frequency-hz = /bits/ 64 <2400000000>;
+
+        /*
+         * Conservative example clock chain.
+         * Adjust later to match your target sample rate.
+         */
+        adi,rx-path-clock-frequencies =
+            <983040000 245760000 122880000 61440000 30720000 30720000>;
+
+        adi,tx-path-clock-frequencies =
+            <983040000 122880000 122880000 61440000 30720000 30720000>;
+
+        /*
+         * Replace these GPIO numbers with your actual PS GPIO/EMIO lines.
+         * On Zynq, MIO GPIOs are 0-53 and EMIO GPIOs usually start at 54.
+         * Example: EMIO GPIO 46 -> Linux GPIO specifier number 100.
+         */
+        reset-gpios = <&gpio0 100 0>;
+
+        /*
+         * Optional. Only add these if connected and driven by PS GPIO.
+         * If ENABLE/TXNRX are driven by FPGA fabric, don't claim them here.
+         */
+        /* enable-gpios = <&gpio0 101 0>; */
+        /* txnrx-gpios  = <&gpio0 102 0>; */
+        /* sync-gpios   = <&gpio0 99 0>; */
+        /* en_agc-gpios = <&gpio0 98 0>; */
+    };
+};
