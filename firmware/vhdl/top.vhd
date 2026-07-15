@@ -54,36 +54,43 @@ entity top is
 end top;
 
 architecture Behavioral of top is
-
+constant NUM_OF_RX_CHANNELS           : natural := 2;
+constant NUM_OF_TX_CHANNELS           : natural := 2;
 constant DMA_NUM_OF_WORDS_WIDTH       : natural := 32;
+constant DMA_REG_BASE_ADDRESS         : unsigned(AXIL_ADDR_W - 1 downto 0) := x"43C10000";
 constant TOP_REG_BASE_ADDRESS         : unsigned(AXIL_ADDR_W - 1 downto 0) := x"43C20000";
 constant TOP_REG_NUMBER_OF_REG        : natural := 16;
 constant TOP_REG_I_TEST_DATA_IDX      : natural := 1;
 constant TOP_REG_Q_TEST_DATA_IDX      : natural := 2;
 constant TOP_REG_USE_TEST_DATA_IDX    : natural := 3;
 constant TOP_REG_POWER_READING_IDX    : natural := 4;
+constant TOP_REG_SMOOTHING_FACTOR_IDX : natural := 5;       
+constant TOP_REG_POW_THD_IDX          : natural := 6;
+constant TOP_REG_POW_THD_REACHED_IDX  : natural := 7;      
+constant TOP_REG_CLEAR_POW_THD_REACHED_IDX : natural := 8;           
 constant TOP_REG_WRITE_MASK           : std_logic_vector(TOP_REG_NUMBER_OF_REG - 1 downto 0) := (
     TOP_REG_I_TEST_DATA_IDX       => '1',
     TOP_REG_Q_TEST_DATA_IDX       => '1',
     TOP_REG_USE_TEST_DATA_IDX     => '1',
     TOP_REG_POWER_READING_IDX     => '0',
+    TOP_REG_SMOOTHING_FACTOR_IDX  => '1',    
+    TOP_REG_POW_THD_IDX           => '1',
+    TOP_REG_POW_THD_REACHED_IDX   => '0',  
+    TOP_REG_CLEAR_POW_THD_REACHED_IDX   => '1',        
     others=>'1'
 );
 
+constant SMOOTHING_FACTOR_W           : natural := 8;
 signal top_reg_rd                     : array_slv_t(0 to TOP_REG_NUMBER_OF_REG - 1 )(AXIL_DATA_W - 1 downto 0);
 signal top_reg_wr                     : array_slv_t(0 to TOP_REG_NUMBER_OF_REG - 1 )(AXIL_DATA_W - 1 downto 0); 
 signal top_reg_axil_master            : axil_master_t;
 signal top_reg_axil_slave             : axil_slave_t;
-signal adc_data_i0                    : STD_LOGIC_VECTOR ( 15 downto 0 );
-signal adc_data_i1                    : STD_LOGIC_VECTOR ( 15 downto 0 );
-signal adc_data_q0                    : STD_LOGIC_VECTOR ( 15 downto 0 );
-signal adc_data_q1                    : STD_LOGIC_VECTOR ( 15 downto 0 );
+signal adc_data_r                     : array_signed_t(0 to NUM_OF_RX_CHANNELS - 1)( 15 downto 0 );
+signal adc_data_i                     : array_signed_t(0 to NUM_OF_RX_CHANNELS - 1)( 15 downto 0 );
 signal adc_valid                      : std_logic;
 signal dac_valid                      : std_logic;
-signal dac_data_i0                    : STD_LOGIC_VECTOR ( 15 downto 0 ) := (others=>'0');
-signal dac_data_i1                    : STD_LOGIC_VECTOR ( 15 downto 0 ) := (others=>'0');
-signal dac_data_q0                    : STD_LOGIC_VECTOR ( 15 downto 0 ) := (others=>'0');
-signal dac_data_q1                    : STD_LOGIC_VECTOR ( 15 downto 0 ) := (others=>'0');
+signal dac_data_r                     : array_signed_t(0 to NUM_OF_TX_CHANNELS - 1)( 15 downto 0 );
+signal dac_data_i                     : array_signed_t(0 to NUM_OF_TX_CHANNELS - 1)( 15 downto 0 );
 signal adc_clk                        : std_logic;
 signal clk_out_adc                    : std_logic;
 signal clk_200mhz                     : std_logic;
@@ -100,17 +107,23 @@ signal dma_controller_s_tlast         : std_logic;
 signal dma_interface_master           : dma_ports_master_t;
 signal dma_interface_slave            : dma_ports_slave_t;
 
+signal power_esti                     : array_unsigned_t(0 to NUM_OF_RX_CHANNELS - 1)(31 downto 0);
+signal power_valid                    : std_logic; 
+signal data_capture_pow_thd           : unsigned(31 downto 0);
+signal clear_thd_reached              : std_logic;       
+signal thd_reached                    : std_logic_vector(NUM_OF_RX_CHANNELS - 1 downto 0);
+signal smoothing_factor               : unsigned(SMOOTHING_FACTOR_W - 1 downto 0);
+
 attribute mark_debug : string;
-attribute mark_debug of adc_valid   : signal is "true";
-attribute mark_debug of dac_valid   : signal is "true";
-attribute mark_debug of dac_data_i0 : signal is "true";
-attribute mark_debug of dac_data_q0 : signal is "true";
-attribute mark_debug of dac_data_i1 : signal is "true";
-attribute mark_debug of dac_data_q1 : signal is "true";
-attribute mark_debug of adc_data_i0 : signal is "true";
-attribute mark_debug of adc_data_q0 : signal is "true";
-attribute mark_debug of adc_data_i1 : signal is "true";
-attribute mark_debug of adc_data_q1 : signal is "true";
+attribute mark_debug of adc_valid       : signal is "true";
+attribute mark_debug of dac_valid       : signal is "true";
+attribute mark_debug of adc_data_r      : signal is "true";
+attribute mark_debug of adc_data_i      : signal is "true";
+attribute mark_debug of power_esti      : signal is "true";
+attribute mark_debug of power_valid     : signal is "true";
+attribute mark_debug of data_capture_pow_thd  : signal is "true";
+attribute mark_debug of thd_reached       : signal is "true";
+attribute mark_debug of smoothing_factor  : signal is "true";
 begin
 
 adc_rst <= '1';
@@ -131,15 +144,15 @@ port map(
   tx_frame_out_p   => tx_frame_out_p,
   adc_clk_o        => adc_clk,
   data_valid_o     => adc_valid, 
-  std_logic_vector(adc_data_ch0_r_o) => adc_data_i0(15 downto 0),
-  std_logic_vector(adc_data_ch0_i_o) => adc_data_q0(15 downto 0),
-  std_logic_vector(adc_data_ch1_r_o) => adc_data_i1(15 downto 0),
-  std_logic_vector(adc_data_ch1_i_o) => adc_data_q1(15 downto 0),
+  adc_data_ch0_r_o => adc_data_r(0),
+  adc_data_ch0_i_o => adc_data_i(0),
+  adc_data_ch1_r_o => adc_data_r(1),
+  adc_data_ch1_i_o => adc_data_i(1),
   data_valid_i     => dac_valid,
-  dac_data_ch0_r_i => signed(dac_data_i0(15 downto 0)),
-  dac_data_ch0_i_i => signed(dac_data_q0(15 downto 0)),
-  dac_data_ch1_r_i => signed(dac_data_i1(15 downto 0)),
-  dac_data_ch1_i_i => signed(dac_data_q1(15 downto 0))
+  dac_data_ch0_r_i => dac_data_r(0),
+  dac_data_ch0_i_i => dac_data_i(0),
+  dac_data_ch1_r_i => dac_data_r(1),
+  dac_data_ch1_i_i => dac_data_i(1)
 );
 
 i_bd_1 : entity work.system_1
@@ -247,10 +260,10 @@ port map(
 process(adc_clk)
 begin
  if rising_edge(adc_clk) then 
-    dma_controller_s_tdata(15 downto 0) <= adc_data_i0;
-    dma_controller_s_tdata(31 downto 16) <= adc_data_q0;
-    dma_controller_s_tdata(47 downto 32) <= adc_data_i1;
-    dma_controller_s_tdata(63 downto 48) <= adc_data_q1;
+    dma_controller_s_tdata(15 downto 0) <=  std_logic_vector(adc_data_r(0));
+    dma_controller_s_tdata(31 downto 16) <= std_logic_vector(adc_data_i(0));
+    dma_controller_s_tdata(47 downto 32) <= std_logic_vector(adc_data_r(1));
+    dma_controller_s_tdata(63 downto 48) <= std_logic_vector(adc_data_i(1));
     dma_controller_s_tvalid <= adc_valid;
  end if;
 end process;
@@ -276,17 +289,23 @@ begin
   dac_valid <= adc_valid;
   if top_reg_wr(TOP_REG_USE_TEST_DATA_IDX)(0) = '1' then 
     dac_valid <= adc_valid;
-    dac_data_i0 <= top_reg_wr(TOP_REG_I_TEST_DATA_IDX)(15 downto 0);
-    dac_data_q0 <= top_reg_wr(TOP_REG_Q_TEST_DATA_IDX)(15 downto 0);
-    dac_data_i1 <= top_reg_wr(TOP_REG_I_TEST_DATA_IDX)(15 downto 0);
-    dac_data_q1 <= top_reg_wr(TOP_REG_Q_TEST_DATA_IDX)(15 downto 0);
+    dac_data_r(0)  <= signed(top_reg_wr(TOP_REG_I_TEST_DATA_IDX)(15 downto 0));
+    dac_data_i(0)  <= signed(top_reg_wr(TOP_REG_Q_TEST_DATA_IDX)(15 downto 0));
+    dac_data_r(0)  <= signed(top_reg_wr(TOP_REG_I_TEST_DATA_IDX)(15 downto 0));
+    dac_data_i(0)  <= signed(top_reg_wr(TOP_REG_Q_TEST_DATA_IDX)(15 downto 0));
   end if;
+
+  smoothing_factor     <= unsigned(top_reg_wr(TOP_REG_SMOOTHING_FACTOR_IDX)(SMOOTHING_FACTOR_W - 1 downto 0));
+  data_capture_pow_thd <= unsigned(top_reg_wr(TOP_REG_POW_THD_IDX));
+  top_reg_rd(TOP_REG_POW_THD_REACHED_IDX)(NUM_OF_RX_CHANNELS - 1 downto 0) <= thd_reached;
+  clear_thd_reached <= top_reg_wr(TOP_REG_CLEAR_POW_THD_REACHED_IDX)(0);
+  
  end if;
 end process;
 
 i_axi_dma_interface : entity work.axi_dma_interface
 generic map (
-  AXIL_REG_BASE_ADDRESS => x"43C10000", 
+  AXIL_REG_BASE_ADDRESS => DMA_REG_BASE_ADDRESS, 
   NUM_OF_WORDS_WIDTH   => DMA_NUM_OF_WORDS_WIDTH
 )
 port map(
@@ -305,8 +324,44 @@ port map(
   dma_interface_master_i   => dma_interface_master,
   dma_interface_slave_o    => dma_interface_slave,
   axil_reg_master_i        => dma_axil_reg_master,
-  axil_reg_slave_o         => dma_axil_reg_slave
+  axil_reg_slave_o         => dma_axil_reg_slave,
+  ext_wr_start_i           => or(thd_reached)
 );
+
+
+g_pow_esti : for i in 0 to NUM_OF_RX_CHANNELS-1 generate
+  i_power_esti : entity work.smoothing_power_estimator
+  generic map (
+    SMOOTHING_FACTOR_W  => SMOOTHING_FACTOR_W,            
+    DATA_W              => 16
+  )
+  port map(
+    clk_i              => adc_clk,
+    reset_i            => '0',
+    smoothing_factor_i => smoothing_factor,      
+    src_data_r_i       => adc_data_r(i),    
+    src_data_i_i       => adc_data_i(i),        
+    src_valid_i        => adc_valid,
+    dst_data_o         => power_esti(i),
+    dst_valid_o        => open
+  );
+end generate g_pow_esti;
+
+g_pow_thd_check : for i in 0 to NUM_OF_RX_CHANNELS-1 generate
+  i_thd_check : entity work.threshold_check_unsigned
+  generic map(
+    DATA_W      => 32
+  )
+  port map (
+    clk_i                => adc_clk,
+    reset_i              => '0',
+    data_i               => power_esti(i),
+    valid_i              => power_valid,
+    threshold_i          => data_capture_pow_thd,
+    clear_i              => clear_thd_reached,
+    threshold_reached_o  => thd_reached(i)      
+  );
+end generate g_pow_thd_check;
 
 
 end Behavioral;

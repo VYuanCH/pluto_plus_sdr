@@ -68,6 +68,7 @@ package axi_reg_datamover_pkg is
   constant READ_ADDRESS_L_IDX     : natural := 5;
   constant READ_ADDRESS_H_IDX     : natural := 6;
   constant READ_NUM_OF_WORDS_IDX  : natural := 7;
+  constant USE_EXT_WR_TRIGGER_IDX : natural := 8;
 
   constant WRITE_MASK             : std_logic_vector(NUMBER_OF_REG - 1 downto 0) := (
     WRITE_START_IDX           => '1',
@@ -78,6 +79,7 @@ package axi_reg_datamover_pkg is
     READ_ADDRESS_L_IDX        => '1',
     READ_ADDRESS_H_IDX        => '1',
     READ_NUM_OF_WORDS_IDX     => '1',
+    USE_EXT_WR_TRIGGER_IDX    => '1',
     others                    => '0'
   );
 end package;

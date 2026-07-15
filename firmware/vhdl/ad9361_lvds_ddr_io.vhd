@@ -38,6 +38,7 @@ end ad9361_lvds_ddr_io;
 architecture Behavioral of ad9361_lvds_ddr_io is
 
 signal rx_clk           : std_logic;
+signal rx_clk_0         : std_logic;
 signal rx_frame         : std_logic;
 signal rx_data          : std_logic_vector(5 downto 0);
 signal rx_frame_pos     : std_logic;

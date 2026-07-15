@@ -29,8 +29,8 @@ entity axi_dma_interface is
     dma_interface_master_i   : in dma_ports_master_t;
     dma_interface_slave_o    : out dma_ports_slave_t;
     axil_reg_master_i        : in axil_master_t;
-    axil_reg_slave_o         : out axil_slave_t
-    -- TODO: Add External start trigger
+    axil_reg_slave_o         : out axil_slave_t;
+    ext_wr_start_i           : in std_logic
     
   );
 end entity;
@@ -45,15 +45,25 @@ architecture Behavioral of axi_dma_interface is
   signal dma_controller_read_start            : std_logic;   
   signal axil_write_regs  : array_slv_t(0 to NUMBER_OF_REG - 1)(AXIL_DATA_W - 1 downto 0);
   signal axil_read_regs   : array_slv_t(0 to NUMBER_OF_REG - 1)(AXIL_DATA_W - 1 downto 0);
+  signal use_ext_wr_start : std_logic;
 begin
 
-  dma_controller_write_start                      <= axil_write_regs(WRITE_START_IDX)(0);
-  dma_controller_write_address(31 downto 0)       <= unsigned(axil_write_regs(WRITE_ADDRESS_L_IDX)(31 downto 0));
-  dma_controller_write_num_of_words(31 downto 0)  <= unsigned(axil_write_regs(WRITE_NUM_OF_WORDS_IDX)(31 downto 0));
-
-  dma_controller_read_start                      <= axil_write_regs(READ_START_IDX)(0);
-  dma_controller_read_address(31 downto 0)       <= unsigned(axil_write_regs(READ_ADDRESS_L_IDX)(31 downto 0));
-  dma_controller_read_num_of_words(31 downto 0)  <= unsigned(axil_write_regs(READ_NUM_OF_WORDS_IDX)(31 downto 0));
+  process(clk_i)
+  begin
+    if rising_edge(clk_i) then 
+      if use_ext_wr_start = '1' then 
+        dma_controller_write_start <= ext_wr_start_i;
+      else
+        dma_controller_write_start                   <= axil_write_regs(WRITE_START_IDX)(0);
+      end if;
+      dma_controller_write_address(31 downto 0)      <= unsigned(axil_write_regs(WRITE_ADDRESS_L_IDX)(31 downto 0));
+      dma_controller_write_num_of_words(31 downto 0) <= unsigned(axil_write_regs(WRITE_NUM_OF_WORDS_IDX)(31 downto 0));
+      use_ext_wr_start                               <= axil_write_regs(USE_EXT_WR_TRIGGER_IDX)(0);
+      dma_controller_read_start                      <= axil_write_regs(READ_START_IDX)(0);
+      dma_controller_read_address(31 downto 0)       <= unsigned(axil_write_regs(READ_ADDRESS_L_IDX)(31 downto 0));
+      dma_controller_read_num_of_words(31 downto 0)  <= unsigned(axil_write_regs(READ_NUM_OF_WORDS_IDX)(31 downto 0));
+    end if;
+  end process;
 
   iaxi_reg : entity work.axi_registers
   generic map (
