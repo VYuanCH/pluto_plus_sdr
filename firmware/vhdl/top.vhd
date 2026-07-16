@@ -113,7 +113,7 @@ signal data_capture_pow_thd           : unsigned(31 downto 0);
 signal clear_thd_reached              : std_logic;       
 signal thd_reached                    : std_logic_vector(NUM_OF_RX_CHANNELS - 1 downto 0);
 signal smoothing_factor               : unsigned(SMOOTHING_FACTOR_W - 1 downto 0);
-
+signal power_esti_valid               : std_logic_vector(NUM_OF_RX_CHANNELS - 1 downto 0);
 attribute mark_debug : string;
 attribute mark_debug of adc_valid       : signal is "true";
 attribute mark_debug of dac_valid       : signal is "true";
@@ -343,9 +343,10 @@ g_pow_esti : for i in 0 to NUM_OF_RX_CHANNELS-1 generate
     src_data_i_i       => adc_data_i(i),        
     src_valid_i        => adc_valid,
     dst_data_o         => power_esti(i),
-    dst_valid_o        => open
+    dst_valid_o        => power_esti_valid(i)
   );
 end generate g_pow_esti;
+power_valid <= power_esti_valid(0);
 
 g_pow_thd_check : for i in 0 to NUM_OF_RX_CHANNELS-1 generate
   i_thd_check : entity work.threshold_check_unsigned

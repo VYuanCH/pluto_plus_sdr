@@ -73,7 +73,7 @@ begin
     dst_r_tdata_o      => pow_r,    
     dst_i_tdata_o      => pow_i, -- Should always 0, but assign a signal so we could check in debug.    
     dst_tvalid_o       => pow_valid,
-    dst_tready_i       => open
+    dst_tready_i       => '1'
   );
 
   process(clk_i)

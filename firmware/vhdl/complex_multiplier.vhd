@@ -22,7 +22,7 @@ entity complex_multiplier is
     dst_r_tdata_o       : out signed(A_WIDTH + B_WIDTH - 1 downto 0); 
     dst_i_tdata_o       : out signed(A_WIDTH + B_WIDTH - 1 downto 0);
     dst_tvalid_o        : out std_logic;
-    dst_tready_i        : out std_logic
+    dst_tready_i        : in std_logic
     
   );
 end entity;
