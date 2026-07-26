@@ -65,7 +65,7 @@ begin
     end if;
   end process;
 
-  iaxi_reg : entity work.axi_registers
+  i_axi_reg : entity work.axi_registers
   generic map (
     AXIL_BASE_ADDRESS   => AXIL_REG_BASE_ADDRESS,
     NUMBER_OF_REGISTERS => NUMBER_OF_REG,
@@ -80,7 +80,7 @@ begin
     write_reg_o       => axil_write_regs
   );
 
-  iaxi_datamover_controller : entity work.axi_datamover_controller
+  i_axi_datamover_controller : entity work.axi_datamover_controller
   generic map (
     NUM_OF_WORDS_WIDTH   => NUM_OF_WORDS_WIDTH
   )

@@ -39,9 +39,7 @@ signal pow_update           : unsigned(SMOOTHING_FACTOR_W + DATA_W*2 - 1 downto 
 signal smoothed_power       : unsigned(DATA_W*2  - 1 downto 0);
 signal pow_valid_z1         : std_logic;
 signal pow_valid_z2         : std_logic;
-attribute mark_debug : string;
-attribute mark_debug of pow_r       : signal is "true";
-attribute mark_debug of pow_i       : signal is "true";
+
 begin
   process(clk_i)
   begin

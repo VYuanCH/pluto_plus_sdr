@@ -90,11 +90,10 @@ architecture Behavioral of axi_datamover_controller is
   signal write_bytes_counter        : unsigned(NUM_OF_WORDS_WIDTH + ceil_log2(BYTES_EACH_WORD_WRITE) downto 0); 
   signal write_enable               : std_logic := '0';
 
---attribute mark_debug : string;
---attribute mark_debug of axis_s2mm_tdata_o : signal is "true";
---attribute mark_debug of axis_s2mm_tvalid_o : signal is "true";
---attribute mark_debug of axis_s2mm_tready_i : signal is "true";
---attribute mark_debug of axis_s2mm_tlast_o : signal is "true";
+attribute mark_debug : string;
+attribute mark_debug of datamover_read_sm : signal is "true";
+attribute mark_debug of datamover_write_sm : signal is "true";
+attribute mark_debug of read_bytes_counter : signal is "true";
 begin
 
   data_s_tready_o <= axis_s2mm_tready_i and write_enable;
