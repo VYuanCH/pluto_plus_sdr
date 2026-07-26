@@ -37,7 +37,6 @@
          * For Pluto-like 1RX1TX testing, omit this initially.
          */
         adi,2rx-2tx-mode-enable;
-	    adi,pp-tx-swap-enable;
 	    adi,pp-rx-swap-enable;
 	    adi,rx-frame-pulse-mode-enable;
 	    adi,lvds-mode-enable;
