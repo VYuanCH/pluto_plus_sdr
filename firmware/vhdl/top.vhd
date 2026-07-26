@@ -57,6 +57,7 @@ architecture Behavioral of top is
 constant NUM_OF_RX_CHANNELS           : natural := 2;
 constant NUM_OF_TX_CHANNELS           : natural := 2;
 constant DMA_NUM_OF_WORDS_WIDTH       : natural := 32;
+constant TXMEM_REG_BASE_ADDRESS       : unsigned(AXIL_ADDR_W - 1 downto 0) := x"43C00000";
 constant DMA_REG_BASE_ADDRESS         : unsigned(AXIL_ADDR_W - 1 downto 0) := x"43C10000";
 constant TOP_REG_BASE_ADDRESS         : unsigned(AXIL_ADDR_W - 1 downto 0) := x"43C20000";
 constant TOP_REG_NUMBER_OF_REG        : natural := 16;
@@ -114,16 +115,17 @@ signal clear_thd_reached              : std_logic;
 signal thd_reached                    : std_logic_vector(NUM_OF_RX_CHANNELS - 1 downto 0);
 signal smoothing_factor               : unsigned(SMOOTHING_FACTOR_W - 1 downto 0);
 signal power_esti_valid               : std_logic_vector(NUM_OF_RX_CHANNELS - 1 downto 0);
+signal tx_data_mem                    : std_logic_vector(NUM_OF_TX_CHANNELS*2*16 - 1 downto 0);
+signal tx_data_mem_reg                : std_logic_vector(NUM_OF_TX_CHANNELS*2*16 - 1 downto 0);
+signal tx_valid_mem                   : std_logic;   
+signal tx_mem_interface_master        : axil_master_t;
+signal tx_mem_interface_slave         : axil_slave_t;
+
 attribute mark_debug : string;
-attribute mark_debug of adc_valid       : signal is "true";
 attribute mark_debug of dac_valid       : signal is "true";
-attribute mark_debug of adc_data_r      : signal is "true";
-attribute mark_debug of adc_data_i      : signal is "true";
-attribute mark_debug of power_esti      : signal is "true";
-attribute mark_debug of power_valid     : signal is "true";
-attribute mark_debug of data_capture_pow_thd  : signal is "true";
-attribute mark_debug of thd_reached       : signal is "true";
-attribute mark_debug of smoothing_factor  : signal is "true";
+attribute mark_debug of adc_valid       : signal is "true";
+attribute mark_debug of dac_data_r      : signal is "true";
+attribute mark_debug of dac_data_i      : signal is "true";
 begin
 
 adc_rst <= '1';
@@ -227,6 +229,27 @@ port map(
   top_reg_rresp             => top_reg_axil_slave.rresp,  
   top_reg_rvalid            => top_reg_axil_slave.rvalid,
 
+  tx_mem_reg_awaddr         => tx_mem_interface_master.awaddr,    
+  tx_mem_reg_awprot         => tx_mem_interface_master.awprot,    
+  tx_mem_reg_awvalid        => tx_mem_interface_master.awvalid,    
+  tx_mem_reg_wdata          => tx_mem_interface_master.wdata,  
+  tx_mem_reg_wstrb          => tx_mem_interface_master.wstrb,  
+  tx_mem_reg_wvalid         => tx_mem_interface_master.wvalid,    
+  tx_mem_reg_bready         => tx_mem_interface_master.bready,    
+  tx_mem_reg_araddr         => tx_mem_interface_master.araddr,    
+  tx_mem_reg_arprot         => tx_mem_interface_master.arprot,    
+  tx_mem_reg_arvalid        => tx_mem_interface_master.arvalid,    
+  tx_mem_reg_rready         => tx_mem_interface_master.rready,
+   
+  tx_mem_reg_awready        => tx_mem_interface_slave.awready,    
+  tx_mem_reg_wready         => tx_mem_interface_slave.wready,    
+  tx_mem_reg_bresp          => tx_mem_interface_slave.bresp,  
+  tx_mem_reg_bvalid         => tx_mem_interface_slave.bvalid,    
+  tx_mem_reg_arready        => tx_mem_interface_slave.arready,    
+  tx_mem_reg_rdata          => tx_mem_interface_slave.rdata,  
+  tx_mem_reg_rresp          => tx_mem_interface_slave.rresp,  
+  tx_mem_reg_rvalid         => tx_mem_interface_slave.rvalid,
+
   M_AXIS_MM2S_STS_0_tdata   => dma_interface_master.mm2s_sts_tdata,    
   M_AXIS_MM2S_STS_0_tkeep   => open,    
   M_AXIS_MM2S_STS_0_tlast   => dma_interface_master.mm2s_sts_tlast,    
@@ -287,12 +310,21 @@ process(adc_clk)
 begin
  if rising_edge(adc_clk) then 
   dac_valid <= adc_valid;
+  if tx_valid_mem = '1' then 
+    tx_data_mem_reg <= tx_data_mem;
+  end if;
+  if adc_valid = '1' then 
+    dac_data_r(0) <= signed(tx_data_mem_reg(15 downto 0));
+    dac_data_i(0) <= signed(tx_data_mem_reg(31 downto 16));
+    dac_data_r(1) <= signed(tx_data_mem_reg(47 downto 32));
+    dac_data_i(1) <= signed(tx_data_mem_reg(63 downto 48));
+  end if;
   if top_reg_wr(TOP_REG_USE_TEST_DATA_IDX)(0) = '1' then 
     dac_valid <= adc_valid;
     dac_data_r(0)  <= signed(top_reg_wr(TOP_REG_I_TEST_DATA_IDX)(15 downto 0));
     dac_data_i(0)  <= signed(top_reg_wr(TOP_REG_Q_TEST_DATA_IDX)(15 downto 0));
-    dac_data_r(0)  <= signed(top_reg_wr(TOP_REG_I_TEST_DATA_IDX)(15 downto 0));
-    dac_data_i(0)  <= signed(top_reg_wr(TOP_REG_Q_TEST_DATA_IDX)(15 downto 0));
+    dac_data_r(1)  <= signed(top_reg_wr(TOP_REG_I_TEST_DATA_IDX)(15 downto 0));
+    dac_data_i(1)  <= signed(top_reg_wr(TOP_REG_Q_TEST_DATA_IDX)(15 downto 0));
   end if;
 
   smoothing_factor     <= unsigned(top_reg_wr(TOP_REG_SMOOTHING_FACTOR_IDX)(SMOOTHING_FACTOR_W - 1 downto 0));
@@ -364,5 +396,24 @@ g_pow_thd_check : for i in 0 to NUM_OF_RX_CHANNELS-1 generate
   );
 end generate g_pow_thd_check;
 
+
+i_axi_tx_mem : entity work.axi_tx_mem
+generic map(
+  AXIL_REG_BASE_ADDRESS   => TXMEM_REG_BASE_ADDRESS,     
+  MEM_DEPTH               => 32768,
+  DATA_W                  => 64
+)
+port map (
+  clk_i                => adc_clk,
+  reset_i              => '0',
+  src_data_i           => dma_controller_m_tdata,
+  src_valid_i          => dma_controller_m_tvalid,
+  src_ready_o          => dma_controller_m_tready,
+  dst_data_o           => tx_data_mem,
+  dst_valid_o          => tx_valid_mem,
+  dst_next_i           => adc_valid,
+  axil_reg_master_i    => tx_mem_interface_master,       
+  axil_reg_slave_o     => tx_mem_interface_slave      
+);
 
 end Behavioral;
