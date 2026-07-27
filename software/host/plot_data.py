@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-FILENAME = "data.bin"
+FILENAME = "data_generated.bin"
 
 # Set this to your actual sample rate if known.
 # Used only for the time axis and FFT plot.

@@ -20,6 +20,8 @@ entity axi_datamover_controller is
     read_address_i       : in unsigned(ADDRESS_WIDTH - 1 downto 0);
     read_num_of_words_i  : in unsigned(NUM_OF_WORDS_WIDTH - 1 downto 0);
     read_start_i         : in std_logic;
+    repeated_read_i      : in std_logic;
+    repeated_write_i     : in std_logic;
 
     data_m_tdata_o       : out std_logic_vector(MM2S_DATA_WIDTH - 1 downto 0);
     data_m_tvalid_o      : out std_logic;
@@ -62,7 +64,7 @@ entity axi_datamover_controller is
 end entity;
 
 architecture Behavioral of axi_datamover_controller is
-  constant TRANSFER_SIZE_BYTES  : natural := 32;
+  constant TRANSFER_SIZE_BYTES  : natural := 1024;
   constant ADDR_BYTES      : natural := ceil_divide(ADDRESS_WIDTH,8)*8;
   constant BYTES_EACH_WORD_READ  : natural := MM2S_DATA_WIDTH/8;
   constant BYTES_EACH_WORD_WRITE : natural := S2MM_DATA_WIDTH/8;
@@ -89,7 +91,8 @@ architecture Behavioral of axi_datamover_controller is
   signal write_bytes_remain         : unsigned(NUM_OF_WORDS_WIDTH + ceil_log2(BYTES_EACH_WORD_WRITE) downto 0);        
   signal write_bytes_counter        : unsigned(NUM_OF_WORDS_WIDTH + ceil_log2(BYTES_EACH_WORD_WRITE) downto 0); 
   signal write_enable               : std_logic := '0';
-
+  signal repeated_read              : std_logic := '0';
+  signal repeated_write             : std_logic := '0';
 attribute mark_debug : string;
 attribute mark_debug of datamover_read_sm : signal is "true";
 attribute mark_debug of datamover_write_sm : signal is "true";
@@ -108,16 +111,17 @@ begin
   process(clk_i)
   begin
     if rising_edge(clk_i) then
-      read_prev <= read_start_i;
+      read_prev     <= read_start_i;
+      repeated_read <= repeated_read_i;
       case datamover_read_sm is 
         when IDLE =>
         last_read_transfer <= '0'; 
           if read_start_i = '1' and read_prev = '0' then
-            read_address_reg      <= read_address_i;
             read_num_of_words_reg <= read_num_of_words_i;
             datamover_read_sm <= INIT;
           end if;
         when INIT =>
+          read_address_reg      <= read_address_i;
           read_bytes_remain <= to_unsigned(BYTES_EACH_WORD_READ,ceil_log2(BYTES_EACH_WORD_READ)+1) * read_num_of_words_reg;
           datamover_read_sm <= SET_CMD;
         when SET_CMD => -- Axi datamover should be in full mode. 
@@ -178,7 +182,12 @@ begin
             end if;
 
         when DONE =>
-          datamover_read_sm <= IDLE;
+          if repeated_read = '1' then 
+            datamover_read_sm <= INIT;
+            last_read_transfer <= '0'; 
+          else
+            datamover_read_sm <= IDLE;
+          end if;
       end case;
     end if;
   end process;
@@ -187,19 +196,20 @@ begin
   process(clk_i)
   begin
     if rising_edge(clk_i) then
-      write_prev <= write_start_i;
+      write_prev     <= write_start_i;
+      repeated_write <= repeated_write_i;
       case datamover_write_sm is 
 
         when IDLE =>
         write_enable <= '0';
         last_write_transfer <= '0'; 
           if write_start_i = '1' and write_prev = '0' then
-            write_address_reg      <= write_address_i;
             write_num_of_words_reg <= write_num_of_words_i;
             datamover_write_sm <= INIT;
           end if;
 
         when INIT =>
+          write_address_reg      <= write_address_i;
           write_bytes_remain <= to_unsigned(BYTES_EACH_WORD_WRITE,ceil_log2(BYTES_EACH_WORD_WRITE)+1) * write_num_of_words_reg;
           datamover_write_sm <= SET_CMD;
 
@@ -261,7 +271,12 @@ begin
             end if;
           --end if;
         when DONE =>
-          datamover_write_sm <= IDLE;
+          if repeated_write = '1' then 
+            datamover_write_sm <= INIT;
+            last_write_transfer <= '0'; 
+          else 
+            datamover_write_sm <= IDLE;
+          end if;
       end case;
     end if;
   end process;

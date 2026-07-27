@@ -63,7 +63,7 @@ constant TOP_REG_BASE_ADDRESS         : unsigned(AXIL_ADDR_W - 1 downto 0) := x"
 constant TOP_REG_NUMBER_OF_REG        : natural := 16;
 constant TOP_REG_I_TEST_DATA_IDX      : natural := 1;
 constant TOP_REG_Q_TEST_DATA_IDX      : natural := 2;
-constant TOP_REG_USE_TEST_DATA_IDX    : natural := 3;
+constant TOP_REG_TX_DATA_SEL_IDX      : natural := 3;
 constant TOP_REG_POWER_READING_IDX    : natural := 4;
 constant TOP_REG_SMOOTHING_FACTOR_IDX : natural := 5;       
 constant TOP_REG_POW_THD_IDX          : natural := 6;
@@ -72,7 +72,7 @@ constant TOP_REG_CLEAR_POW_THD_REACHED_IDX : natural := 8;
 constant TOP_REG_WRITE_MASK           : std_logic_vector(TOP_REG_NUMBER_OF_REG - 1 downto 0) := (
     TOP_REG_I_TEST_DATA_IDX       => '1',
     TOP_REG_Q_TEST_DATA_IDX       => '1',
-    TOP_REG_USE_TEST_DATA_IDX     => '1',
+    TOP_REG_TX_DATA_SEL_IDX       => '1',
     TOP_REG_POWER_READING_IDX     => '0',
     TOP_REG_SMOOTHING_FACTOR_IDX  => '1',    
     TOP_REG_POW_THD_IDX           => '1',
@@ -105,6 +105,11 @@ signal dma_controller_s_tdata         : std_logic_vector(S2MM_DATA_WIDTH - 1 dow
 signal dma_controller_s_tvalid        : std_logic;   
 signal dma_controller_s_tready        : std_logic; -- Usually this is an output, but in this case the axi datamover controller only monitors the master channel of datamover, the slave module receiving the data should assign the tready.   
 signal dma_controller_s_tlast         : std_logic;
+
+signal dma_rd_fifo_m_tdata            : std_logic_vector(S2MM_DATA_WIDTH - 1 downto 0); 
+signal dma_rd_fifo_m_tlast            : std_logic;   
+signal dma_rd_fifo_m_tready           : std_logic; -- Usually this is an output, but in this case the axi datamover controller only monitors the master channel of datamover, the slave module receiving the data should assign the tready.   
+signal dma_rd_fifo_m_tvalid           : std_logic;
 signal dma_interface_master           : dma_ports_master_t;
 signal dma_interface_slave            : dma_ports_slave_t;
 
@@ -120,6 +125,7 @@ signal tx_data_mem_reg                : std_logic_vector(NUM_OF_TX_CHANNELS*2*16
 signal tx_valid_mem                   : std_logic;   
 signal tx_mem_interface_master        : axil_master_t;
 signal tx_mem_interface_slave         : axil_slave_t;
+signal tx_mem_ready                   : std_logic;
 
 attribute mark_debug : string;
 attribute mark_debug of dac_valid       : signal is "true";
@@ -269,14 +275,32 @@ port map(
   S_AXIS_MM2S_CMD_0_tdata   => dma_interface_slave.mm2s_cmd_tdata,    
   S_AXIS_MM2S_CMD_0_tready  => dma_interface_master.mm2s_cmd_tready,      
   S_AXIS_MM2S_CMD_0_tvalid  => dma_interface_slave.mm2s_cmd_tvalid,      
-  S_AXIS_S2MM_0_tdata       => dma_interface_slave.axis_s2mm_tdata,
-  S_AXIS_S2MM_0_tkeep       => (others => '1'),
-  S_AXIS_S2MM_0_tlast       => dma_interface_slave.axis_s2mm_tlast,
-  S_AXIS_S2MM_0_tready      => dma_interface_master.axis_s2mm_tready,  
-  S_AXIS_S2MM_0_tvalid      => dma_interface_slave.axis_s2mm_tvalid,  
+  dma_wr_fifo_s_tdata       => dma_interface_slave.axis_s2mm_tdata,
+  dma_wr_fifo_s_tkeep       => (others => '1'),
+  dma_wr_fifo_s_tlast       => dma_interface_slave.axis_s2mm_tlast,
+  dma_wr_fifo_s_tready      => dma_interface_master.axis_s2mm_tready,  
+  dma_wr_fifo_s_tvalid      => dma_interface_slave.axis_s2mm_tvalid,  
   S_AXIS_S2MM_CMD_0_tdata   => dma_interface_slave.s2mm_cmd_tdata,    
   S_AXIS_S2MM_CMD_0_tready  => dma_interface_master.s2mm_cmd_tready,      
-  S_AXIS_S2MM_CMD_0_tvalid  => dma_interface_slave.s2mm_cmd_tvalid
+  S_AXIS_S2MM_CMD_0_tvalid  => dma_interface_slave.s2mm_cmd_tvalid,
+
+  dma_rd_fifo_s_tdata       => dma_controller_m_tdata,
+  dma_rd_fifo_s_tkeep       => (others => '1'),
+  dma_rd_fifo_s_tlast       => dma_controller_m_tlast,
+  dma_rd_fifo_s_tready      => dma_controller_m_tready,  
+  dma_rd_fifo_s_tvalid      => dma_controller_m_tvalid,  
+
+  dma_rd_fifo_m_tdata       => dma_rd_fifo_m_tdata,
+  dma_rd_fifo_m_tkeep       => open,
+  dma_rd_fifo_m_tlast       => dma_rd_fifo_m_tlast,
+  dma_rd_fifo_m_tready      => dma_rd_fifo_m_tready,  
+  dma_rd_fifo_m_tvalid      => dma_rd_fifo_m_tvalid
+  --S_AXIS_S2MM_0_tdata       => dma_interface_slave.axis_s2mm_tdata,
+  --S_AXIS_S2MM_0_tkeep       => (others => '1'),
+  --S_AXIS_S2MM_0_tlast       => dma_interface_slave.axis_s2mm_tlast,
+  --S_AXIS_S2MM_0_tready      => dma_interface_master.axis_s2mm_tready,  
+  --S_AXIS_S2MM_0_tvalid      => dma_interface_slave.axis_s2mm_tvalid,  
+
 
 );
 
@@ -313,13 +337,17 @@ begin
   if tx_valid_mem = '1' then 
     tx_data_mem_reg <= tx_data_mem;
   end if;
-  if adc_valid = '1' then 
-    dac_data_r(0) <= signed(tx_data_mem_reg(15 downto 0));
-    dac_data_i(0) <= signed(tx_data_mem_reg(31 downto 16));
-    dac_data_r(1) <= signed(tx_data_mem_reg(47 downto 32));
-    dac_data_i(1) <= signed(tx_data_mem_reg(63 downto 48));
+
+  if top_reg_wr(TOP_REG_TX_DATA_SEL_IDX)(1 downto 0) = "00" then
+    if adc_valid = '1' then 
+      dac_data_r(0) <= signed(tx_data_mem_reg(15 downto 0));
+      dac_data_i(0) <= signed(tx_data_mem_reg(31 downto 16));
+      dac_data_r(1) <= signed(tx_data_mem_reg(47 downto 32));
+      dac_data_i(1) <= signed(tx_data_mem_reg(63 downto 48));
+    end if;
   end if;
-  if top_reg_wr(TOP_REG_USE_TEST_DATA_IDX)(0) = '1' then 
+  
+  if top_reg_wr(TOP_REG_TX_DATA_SEL_IDX)(1 downto 0) = "01" then 
     dac_valid <= adc_valid;
     dac_data_r(0)  <= signed(top_reg_wr(TOP_REG_I_TEST_DATA_IDX)(15 downto 0));
     dac_data_i(0)  <= signed(top_reg_wr(TOP_REG_Q_TEST_DATA_IDX)(15 downto 0));
@@ -327,13 +355,25 @@ begin
     dac_data_i(1)  <= signed(top_reg_wr(TOP_REG_Q_TEST_DATA_IDX)(15 downto 0));
   end if;
 
+  if top_reg_wr(TOP_REG_TX_DATA_SEL_IDX)(1 downto 0) = "10" then
+    dac_valid <= adc_valid;
+    if dma_rd_fifo_m_tready = '1' and dma_rd_fifo_m_tvalid = '1' then 
+      dac_data_r(0) <= signed(dma_rd_fifo_m_tdata(15 downto 0));
+      dac_data_i(0) <= signed(dma_rd_fifo_m_tdata(31 downto 16));
+      dac_data_r(1) <= signed(dma_rd_fifo_m_tdata(47 downto 32));
+      dac_data_i(1) <= signed(dma_rd_fifo_m_tdata(63 downto 48));
+    end if;
+  end if;
+
   smoothing_factor     <= unsigned(top_reg_wr(TOP_REG_SMOOTHING_FACTOR_IDX)(SMOOTHING_FACTOR_W - 1 downto 0));
   data_capture_pow_thd <= unsigned(top_reg_wr(TOP_REG_POW_THD_IDX));
   top_reg_rd(TOP_REG_POW_THD_REACHED_IDX)(NUM_OF_RX_CHANNELS - 1 downto 0) <= thd_reached;
-  clear_thd_reached <= top_reg_wr(TOP_REG_CLEAR_POW_THD_REACHED_IDX)(0);
-  
+  clear_thd_reached <= top_reg_wr(TOP_REG_CLEAR_POW_THD_REACHED_IDX)(0);  
+
  end if;
 end process;
+
+dma_rd_fifo_m_tready <= adc_valid when top_reg_wr(TOP_REG_TX_DATA_SEL_IDX)(1 downto 0) = "10" else tx_mem_ready;
 
 i_axi_dma_interface : entity work.axi_dma_interface
 generic map (
@@ -406,9 +446,9 @@ generic map(
 port map (
   clk_i                => adc_clk,
   reset_i              => '0',
-  src_data_i           => dma_controller_m_tdata,
-  src_valid_i          => dma_controller_m_tvalid,
-  src_ready_o          => dma_controller_m_tready,
+  src_data_i           => dma_rd_fifo_m_tdata,
+  src_valid_i          => dma_rd_fifo_m_tvalid,
+  src_ready_o          => tx_mem_ready,
   dst_data_o           => tx_data_mem,
   dst_valid_o          => tx_valid_mem,
   dst_next_i           => adc_valid,

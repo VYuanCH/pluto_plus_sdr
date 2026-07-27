@@ -46,6 +46,9 @@ architecture Behavioral of axi_dma_interface is
   signal axil_write_regs  : array_slv_t(0 to NUMBER_OF_REG - 1)(AXIL_DATA_W - 1 downto 0);
   signal axil_read_regs   : array_slv_t(0 to NUMBER_OF_REG - 1)(AXIL_DATA_W - 1 downto 0);
   signal use_ext_wr_start : std_logic;
+  signal repeated_write   : std_logic;
+  signal repeated_read    : std_logic;
+  
 begin
 
   process(clk_i)
@@ -56,10 +59,12 @@ begin
       else
         dma_controller_write_start                   <= axil_write_regs(WRITE_START_IDX)(0);
       end if;
+      repeated_write                                 <= axil_write_regs(WRITE_START_IDX)(1);
       dma_controller_write_address(31 downto 0)      <= unsigned(axil_write_regs(WRITE_ADDRESS_L_IDX)(31 downto 0));
       dma_controller_write_num_of_words(31 downto 0) <= unsigned(axil_write_regs(WRITE_NUM_OF_WORDS_IDX)(31 downto 0));
       use_ext_wr_start                               <= axil_write_regs(USE_EXT_WR_TRIGGER_IDX)(0);
       dma_controller_read_start                      <= axil_write_regs(READ_START_IDX)(0);
+      repeated_read                                  <= axil_write_regs(READ_START_IDX)(1);
       dma_controller_read_address(31 downto 0)       <= unsigned(axil_write_regs(READ_ADDRESS_L_IDX)(31 downto 0));
       dma_controller_read_num_of_words(31 downto 0)  <= unsigned(axil_write_regs(READ_NUM_OF_WORDS_IDX)(31 downto 0));
     end if;
@@ -93,7 +98,9 @@ begin
     read_address_i       => dma_controller_read_address,
     read_num_of_words_i  => dma_controller_read_num_of_words,
     read_start_i         => dma_controller_read_start,
-
+    repeated_write_i     => repeated_write,
+    repeated_read_i      => repeated_read,
+    
     data_m_tdata_o       => data_m_tdata_o,
     data_m_tvalid_o      => data_m_tvalid_o,
     data_m_tready_i      => data_m_tready_i,
